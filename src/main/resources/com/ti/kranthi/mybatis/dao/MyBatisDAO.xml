@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+    PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- Mapper to tell the DAO location -->
+<mapper namespace="com.ti.kranthi.mybatis.dao.MyBatisDAO">
+
+	<!-- Cache Implementation -->
+	<cache flushInterval="30000" readOnly="true" />
+
+	<!-- Result Map for EmployeeMap -->
+	<resultMap id="EmployeeMap" type="com.ti.kranthi.mybatis.view.Employee">
+		<id property="employeeId" column="employeeId" />
+		<result property="employeeName" column="employeeName" />
+		<result property="employeeSalary" column="employeeSalary" />
+		<result property="employeeLocation" column="employeeLocation" />
+		<result property="phoneCode" column="phoneCode" />
+		<result property="phoneNumber" column="phoneNumber" />
+		<result property="employeeRole" column="employeeRole" />
+		<result property="employeeCompanyId" column="employeeCompanyId" />
+		<result property="employeeCompanyName" column="employeeCompanyName" />
+		<collection property="employeeOldCompanyDetails"
+			ofType="com.ti.kranthi.mybatis.view.OldCompanyDetails" resultMap="OldCompanyDetaisMap" />
+	</resultMap>
+
+	<!-- Result Map for Old Company Details Map -->
+	<resultMap id="OldCompanyDetaisMap" type="com.ti.kranthi.mybatis.view.OldCompanyDetails">
+		<result property="employeeCompanyId" column="oldEmployeeCompanyId" />
+		<result property="employeeCompanyName" column="oldEmployeeCompanyName" />
+	</resultMap>
+
+	<!-- Commonly used Select can be placed in sqlId & used later -->
+	<sql id="selectEmployee">
+		SELECT empl.EMP_ID AS employeeId,
+		empl.EMP_NAME AS
+		employeeName,
+		empl.EMP_SALARY AS employeeSalary,
+		empl.EMP_LOCATION AS
+		employeeLocation,
+		empl.PHONE_CODE AS phoneCode,
+		empl.PHONE_NUMBER AS
+		phoneNumber,
+		empl.EMP_ROLE AS employeeRole,
+		comp.COMPANY_ID AS
+		employeeCompanyId,
+		comp.COMPANY_NAME AS employeeCompanyName,
+		oldCompDetails.COMPANY_ID AS
+		oldEmployeeCompanyId,
+		oldCompDetails.COMPANY_NAME AS oldEmployeeCompanyName
+		FROM
+		${schema}.KRA_EMPLOYEE empl
+		LEFT OUTER JOIN ${schema}.KRA_COMP_DETAILS
+		comp
+		ON empl.COMPANY_ID = comp.COMPANY_ID
+		LEFT OUTER JOIN
+		${schema}.KRA_OLD_COMP_DETAILS oldComp
+		ON empl.EMP_ID = oldComp.EMP_ID
+		LEFT OUTER JOIN ${schema}.KRA_COMP_DETAILS oldCompDetails
+		ON
+		oldCompDetails.COMPANY_ID = oldComp.COMPANY_ID
+	</sql>
+
+	<!-- Schema mapping [En,Cn,Jp], As of now only one Schema is mapped by hardcoding 
+		in Java, checking language code with Respective Lang codes from Constants -->
+	<sql id="bindSchema">
+		<choose>
+			<when test="langCode==@com.ti.kranthi.mybatis.util.MyBatisConstants@ZH_CN">
+				<bind name="schema" value="'KRANTHI'" />
+			</when>
+			<when test="langCode==@com.ti.kranthi.mybatis.util.MyBatisConstants@JA_JP">
+				<bind name="schema" value="'KRANTHI'" />
+			</when>
+			<otherwise>
+				<bind name="schema" value="'KRANTHI'" />
+			</otherwise>
+		</choose>
+	</sql>
+
+	<select id="getEmployeeDetailByEmpId" parameterType="map"
+		resultMap="EmployeeMap">
+		<!-- Including Bind References which will go & search for the Id and place 
+			it's content here -->
+		<include refid="bindSchema"></include>
+		<include refid="selectEmployee"></include>
+
+		<!-- To get List of Employee Details by checking if Param Exists and checking 
+			if Value is present -->
+		<if
+			test="_parameter.containsKey ('userIds') and userIds != null and userIds.size > 0">
+			WHERE empl.EMP_ID IN
+			<foreach item="userId" collection="userIds" separator=","
+				open="(" close=")">
+				#{userId}
+			</foreach>
+			ORDER BY empl.EMP_ID ASC
+		</if>
+
+		<!-- To get for One EmployeeId -->
+		<if test="_parameter.containsKey('userId')">
+			WHERE empl.EMP_ID = #{userId}
+		</if>
+	</select>
+
+</mapper>
